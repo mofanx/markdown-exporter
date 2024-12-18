@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Markdown Export</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Markdown Export</h1>
+      <p class="subtitle">将网页内容转换为Markdown格式</p>
+    </div>
+    
+    <div class="main">
+      <div class="options">
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeImages" checked>
+          包含图片
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeLinks" checked>
+          包含链接
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeTables" checked>
+          包含表格
+        </label>
+      </div>
+
+      <button id="convertBtn" class="primary-button">
+        <span class="button-icon">📝</span>
+        转换为Markdown
+      </button>
+      
+      <div id="status" class="status"></div>
+
+      <div id="previewContainer" class="preview-container" style="display: none;">
+        <div class="preview-header">
+          <h2>预览</h2>
+          <div class="preview-actions">
+            <button id="copyBtn" class="action-button">
+              <span class="button-icon">📋</span>
+              复制
+            </button>
+            <button id="downloadBtn" class="action-button">
+              <span class="button-icon">💾</span>
+              下载
+            </button>
+          </div>
+        </div>
+        <div id="preview" class="preview-content"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p class="tip">提示：如果转换失败，请尝试刷新页面后重试</p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
