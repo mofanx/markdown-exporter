@@ -1,5 +1,8 @@
+// 使用兼容性API处理
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 // 监听来自popup的消息
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'ping') {
     sendResponse({ success: true });
     return true;
@@ -707,7 +710,8 @@ function removeEmptyElements(element) {
 }
 
 // 用于检查content script是否已注入
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+// 注意：此处已在文件顶部定义了browserAPI变量，所以此处直接使用
+browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'ping') {
     sendResponse({ success: true });
     return true;

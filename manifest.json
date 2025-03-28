@@ -1,18 +1,15 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Markdown Export",
   "version": "1.0",
   "description": "Convert web page content to clean Markdown format",
   "permissions": [
     "activeTab",
-    "scripting",
     "clipboardWrite",
-    "storage"
-  ],
-  "host_permissions": [
+    "storage",
     "<all_urls>"
   ],
-  "action": {
+  "browser_action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -28,12 +25,17 @@
     }
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "scripts": ["background.js"]
   },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "markdown-exporter@example.com",
+      "strict_min_version": "57.0"
+    }
   }
 }

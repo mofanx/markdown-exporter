@@ -1,3 +1,6 @@
+// 定义兼容性API层
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 // 状态更新函数
 function updateStatus(message, isError = false) {
   const statusDiv = document.getElementById('status');
@@ -9,7 +12,7 @@ function updateStatus(message, isError = false) {
 // 检查content script是否已注入
 async function checkContentScript(tabId) {
   try {
-    await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    await browserAPI.tabs.sendMessage(tabId, { action: 'ping' });
     return true;
   } catch (error) {
     return false;
@@ -19,10 +22,17 @@ async function checkContentScript(tabId) {
 // 注入content script
 async function injectContentScript(tabId) {
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content.js']
-    });
+    // Firefox使用browser.tabs.executeScript，Chrome使用chrome.scripting.executeScript
+    if (typeof browser !== 'undefined') {
+      await browser.tabs.executeScript(tabId, {
+        file: 'content.js'
+      });
+    } else {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content.js']
+      });
+    }
     return true;
   } catch (error) {
     console.error('注入content script失败:', error);
@@ -90,13 +100,15 @@ async function convertToMarkdown() {
     updateStatus('正在准备转换...');
 
     // 获取当前标签页
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+    // 安全地获取第一个标签页，避免在Firefox中出现Symbol.iterator错误
+    const tab = tabs && tabs.length > 0 ? tabs[0] : null;
     if (!tab) {
       throw new Error('无法获取当前标签页信息');
     }
 
     // 检查URL是否合法
-    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('edge://')) {
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:') || tab.url.startsWith('moz-extension://')) {
       throw new Error('无法在浏览器内部页面上运行此扩展');
     }
 
@@ -114,7 +126,7 @@ async function convertToMarkdown() {
 
     // 发送转换请求
     updateStatus('正在转换内容...');
-    const response = await chrome.tabs.sendMessage(tab.id, { 
+    const response = await browserAPI.tabs.sendMessage(tab.id, { 
       action: 'convertToMarkdown',
       options: getOptions()
     });
@@ -179,19 +191,28 @@ document.addEventListener('DOMContentLoaded', () => {
       previewContainer.style.display = 'none';
 
       // 获取当前标签页
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+      // 安全地获取第一个标签页，避免在Firefox中出现Symbol.iterator错误
+      const tab = tabs && tabs.length > 0 ? tabs[0] : null;
       if (!tab) throw new Error('无法获取当前标签页');
 
       // 检查content script是否已注入
       try {
-        const response = await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+        const response = await browserAPI.tabs.sendMessage(tab.id, { action: 'ping' });
         if (!response) throw new Error('无法连接到页面');
       } catch (error) {
         // 如果content script未注入，先注入它
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['content.js']
-        });
+        // 使用兼容性方式注入content script
+        if (typeof browser !== 'undefined') {
+          await browser.tabs.executeScript(tab.id, {
+            file: 'content.js'
+          });
+        } else {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js']
+          });
+        }
       }
 
       // 发送转换请求
@@ -202,9 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const response = await new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tab.id, { action: 'convert', options }, response => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
+        browserAPI.tabs.sendMessage(tab.id, { action: 'convert', options }, response => {
+          // 检查运行时错误，Firefox和Chrome的处理方式不同
+          const runtimeError = browserAPI.runtime.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message || '运行时错误'));
           } else if (!response) {
             reject(new Error('无法获取响应'));
           } else if (!response.success) {
@@ -256,8 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 检查当前页面是否支持转换
-chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-  if (tab && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://'))) {
+browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  // 安全地获取第一个标签页，避免在Firefox中出现Symbol.iterator错误
+  const tab = tabs && tabs.length > 0 ? tabs[0] : null;
+  if (tab && (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:') || tab.url.startsWith('moz-extension://'))) {
     updateStatus('此页面不支持转换', true);
     if (convertBtn) {
       convertBtn.disabled = true;
